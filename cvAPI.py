@@ -5,26 +5,24 @@ from pydantic import BaseModel
 
 router = APIRouter()
 
-conn = get_db_connection()
-
 
 class ParkingUpdate(BaseModel):
     occupancy: int
 
 @router.get("/data/{id_cam}")
 def get_cvdata(id_cam: int):
-
+    conn = get_db_connection()
     with conn.cursor() as cur:
 
-        cur.execute("SELECT cvdata FROM cameras WHERE id = %s", (id_cam,))
+        cur.execute("SELECT cv_data FROM cameras WHERE id = %s", (id_cam,))
         row = cur.fetchone()
         if row is None:
             return {"error": "Camera not found"}
-        return row
+        return row[0]
 
 @router.patch("/occupancy/{id_parking}")
 def update_occupancy(id_parking: int, parking: ParkingUpdate):
-
+    conn = get_db_connection()
     with conn.cursor() as cur:
 
         cur.execute("UPDATE parkings SET occupancy = %s WHERE id = %s", (parking.occupancy, id_parking))

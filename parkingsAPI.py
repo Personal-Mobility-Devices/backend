@@ -4,10 +4,9 @@ from typing import List
 
 router = APIRouter()
 
-conn = get_db_connection()
-
 @router.get("/parkings/all")
 def get_all_parkings():
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM parkings;")
     data = cur.fetchall()
@@ -15,6 +14,7 @@ def get_all_parkings():
 
 @router.get("/parkings/in_area")
 def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max: float):
+    conn = get_db_connection()
     cur = conn.cursor()
     query = """
         SELECT id, coordinates
@@ -29,6 +29,7 @@ def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max
 
 @router.get("/parking/{parking_id}")
 def get_parking(parking_id: int):
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM parkings WHERE id = %s", (parking_id,))
     return cur.fetchone()
@@ -36,6 +37,7 @@ def get_parking(parking_id: int):
 
 @router.get("/parking_fields/{parking_id}")
 def get_parking_fields(parking_id: int, fields: str):
+    conn = get_db_connection()
     selected = ",".join([f.strip() for f in fields.split(",")])
     cur = conn.cursor()
     cur.execute(f"SELECT {selected} FROM parkings WHERE id = %s", (parking_id,))
@@ -48,6 +50,7 @@ def get_parking_fields(parking_id: int, fields: str):
 
 @router.get("/favorite_by_user/{user_id}")
 def get_favorites(user_id: int):
+    conn = get_db_connection()
     cur = conn.cursor()
     query = """
         SELECT p.id, p.name, p.coordinates
@@ -61,6 +64,7 @@ def get_favorites(user_id: int):
 # тут поправить если мы храним координаты как [число, число], а не, как я, в виде словаря
 @router.get("/parkinggeojson/{parking_id}")
 def get_parking_geojson(parking_id: int):
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("""
         SELECT id, description, coordinates, name, name_obj, adm_area, district, occupancy

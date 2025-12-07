@@ -5,7 +5,6 @@ from typing import Optional
 
 router = APIRouter()
 
-conn = get_db_connection()
 class UserCreate(BaseModel):
     email: str
     phone_number: Optional[str] = None
@@ -19,6 +18,7 @@ class UserUpdate(BaseModel):
 
 @router.get("/users/all")
 def get_all_users():
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT id, email, phone_number, subscription_status FROM users;")
     return cur.fetchall()
@@ -26,6 +26,7 @@ def get_all_users():
 
 @router.get("/user/{user_id}")
 def get_user(user_id: int):
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
         """
@@ -43,6 +44,7 @@ def get_user(user_id: int):
 
 @router.get("/user_fields/{user_id}")
 def get_user_fields(user_id: int, fields: str):
+    conn = get_db_connection()
     selected = ",".join([f.strip() for f in fields.split(",")])
     cur = conn.cursor()
     cur.execute(f"SELECT {selected} FROM users WHERE id = %s", (user_id,))
@@ -55,6 +57,7 @@ def get_user_fields(user_id: int, fields: str):
 
 @router.post("/users")
 def create_user(user: UserCreate):
+    conn = get_db_connection()
     cur = conn.cursor()
 
     cur.execute("SELECT id FROM users WHERE email = %s", (user.email,))
@@ -93,6 +96,7 @@ def update_user(user_id: int, user: UserUpdate):
 
     params.append(user_id)
 
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
         f"""
@@ -114,6 +118,7 @@ def update_user(user_id: int, user: UserUpdate):
 
 @router.delete("/user/{user_id}", status_code=204)
 def delete_user(user_id: int):
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("DELETE FROM users WHERE id = %s RETURNING id;", (user_id,))
     deleted = cur.fetchone()
@@ -124,6 +129,7 @@ def delete_user(user_id: int):
 
 @router.get("/users/stats")
 def get_users_stats():
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute(
         """
@@ -144,6 +150,7 @@ def get_users_stats():
 
 @router.get("/users/{user_id}/favorites")
 def get_user_favorites(user_id: int):
+    conn = get_db_connection()
     cur = conn.cursor()
     cur.execute("SELECT 1 FROM users WHERE id = %s", (user_id,))
     if cur.fetchone() is None:
