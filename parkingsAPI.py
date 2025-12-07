@@ -6,12 +6,11 @@ router = APIRouter()
 
 conn = psycopg2.connect(
     dbname="parkings_db",
-    user="postgres",
-    password="228336",
+    user="parkings_db_user",
+    password="dxUVHnV0sqULLO73J2dxZETqne4feSK9",
     host="localhost",
     port="5432"
 )
-
 
 @router.get("/parkings/all")
 def get_all_parkings():
