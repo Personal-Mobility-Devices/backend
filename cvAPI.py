@@ -1,23 +1,23 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 import psycopg2
 from pydantic import BaseModel
 
 
-app = FastAPI()
-
+router = APIRouter()
 
 conn = psycopg2.connect(
-    dbname = "parkings_db",
-    user = "postgres",
-    password = "228336",
-    host = "localhost",
-    port = "5432"
+    dbname="parkings_db",
+    user="postgres",
+    password="228336",
+    host="localhost",
+    port="5432"
 )
+
 
 class ParkingUpdate(BaseModel):
     occupancy: int
 
-@app.get("/data/{id_cam}")
+@router.get("/data/{id_cam}")
 def get_cvdata(id_cam: int):
 
     with conn.cursor() as cur:
@@ -28,7 +28,7 @@ def get_cvdata(id_cam: int):
             return {"error": "Camera not found"}
         return row
 
-@app.patch("/occupancy/{id_parking}")
+@router.patch("/occupancy/{id_parking}")
 def update_occupancy(id_parking: int, parking: ParkingUpdate):
 
     with conn.cursor() as cur:

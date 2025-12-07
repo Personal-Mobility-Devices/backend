@@ -1,9 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import APIRouter, HTTPException
 import psycopg2
 from pydantic import BaseModel
 from typing import Optional
 
-app = FastAPI()
+router = APIRouter()
 
 conn = psycopg2.connect(
     dbname="parkings_db",
@@ -24,14 +24,14 @@ class UserUpdate(BaseModel):
     subscription_status: Optional[bool] = None
 
 
-@app.get("/users/all")
+@router.get("/users/all")
 def get_all_users():
     cur = conn.cursor()
     cur.execute("SELECT id, email, phone_number, subscription_status FROM users;")
     return cur.fetchall()
 
 
-@app.get("/user/{user_id}")
+@router.get("/user/{user_id}")
 def get_user(user_id: int):
     cur = conn.cursor()
     cur.execute(
@@ -48,7 +48,7 @@ def get_user(user_id: int):
     return row
 
 
-@app.get("/user_fields/{user_id}")
+@router.get("/user_fields/{user_id}")
 def get_user_fields(user_id: int, fields: str):
     selected = ",".join([f.strip() for f in fields.split(",")])
     cur = conn.cursor()
@@ -60,7 +60,7 @@ def get_user_fields(user_id: int, fields: str):
     return result
 
 
-@app.post("/users")
+@router.post("/users")
 def create_user(user: UserCreate):
     cur = conn.cursor()
 
@@ -83,7 +83,7 @@ def create_user(user: UserCreate):
     return dict(zip(fields, created_user))
 
 
-@app.put("/user/{user_id}")
+@router.put("/user/{user_id}")
 def update_user(user_id: int, user: UserUpdate):
     updates = []
     params = []
@@ -119,7 +119,7 @@ def update_user(user_id: int, user: UserUpdate):
     return dict(zip(fields, updated))
 
 
-@app.delete("/user/{user_id}", status_code=204)
+@router.delete("/user/{user_id}", status_code=204)
 def delete_user(user_id: int):
     cur = conn.cursor()
     cur.execute("DELETE FROM users WHERE id = %s RETURNING id;", (user_id,))
@@ -129,7 +129,7 @@ def delete_user(user_id: int):
     conn.commit()
 
 
-@app.get("/users/stats")
+@router.get("/users/stats")
 def get_users_stats():
     cur = conn.cursor()
     cur.execute(
@@ -149,7 +149,7 @@ def get_users_stats():
     }
 
 
-@app.get("/users/{user_id}/favorites")
+@router.get("/users/{user_id}/favorites")
 def get_user_favorites(user_id: int):
     cur = conn.cursor()
     cur.execute("SELECT 1 FROM users WHERE id = %s", (user_id,))

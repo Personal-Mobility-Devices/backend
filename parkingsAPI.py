@@ -1,8 +1,8 @@
-from fastapi import FastAPI
+from fastapi import APIRouter
 import psycopg2
 from typing import List
 
-app = FastAPI()
+router = APIRouter()
 
 conn = psycopg2.connect(
     dbname="parkings_db",
@@ -12,14 +12,15 @@ conn = psycopg2.connect(
     port="5432"
 )
 
-@app.get("/parkings/all")
+
+@router.get("/parkings/all")
 def get_all_parkings():
     cur = conn.cursor()
     cur.execute("SELECT * FROM parkings;")
     data = cur.fetchall()
     return data
 
-@app.get("/parkings/in_area")
+@router.get("/parkings/in_area")
 def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max: float):
     cur = conn.cursor()
     query = """
@@ -33,14 +34,14 @@ def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max
     return data
 
 
-@app.get("/parking/{parking_id}")
+@router.get("/parking/{parking_id}")
 def get_parking(parking_id: int):
     cur = conn.cursor()
     cur.execute("SELECT * FROM parkings WHERE id = %s", (parking_id,))
     return cur.fetchone()
 
 
-@app.get("/parking_fields/{parking_id}")
+@router.get("/parking_fields/{parking_id}")
 def get_parking_fields(parking_id: int, fields: str):
     selected = ",".join([f.strip() for f in fields.split(",")])
     cur = conn.cursor()
@@ -52,7 +53,7 @@ def get_parking_fields(parking_id: int, fields: str):
     return result
 
 
-@app.get("/favorite_by_user/{user_id}")
+@router.get("/favorite_by_user/{user_id}")
 def get_favorites(user_id: int):
     cur = conn.cursor()
     query = """
@@ -65,7 +66,7 @@ def get_favorites(user_id: int):
     return cur.fetchall()
 
 # тут поправить если мы храним координаты как [число, число], а не, как я, в виде словаря
-@app.get("/parkinggeojson/{parking_id}")
+@router.get("/parkinggeojson/{parking_id}")
 def get_parking_geojson(parking_id: int):
     cur = conn.cursor()
     cur.execute("""

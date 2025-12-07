@@ -1,7 +1,7 @@
 from fastapi import FastAPI
-from parkingsAPI import app as parking_app
-from usersAPI import app as user_app
-from cvAPI import app as cv_app
+from parkingsAPI import router as parking_router
+from usersAPI import router as user_router
+from cvAPI import router as cv_router
 
 app = FastAPI()
 
@@ -11,6 +11,6 @@ def home():
 
 
 
-app.include_router(parking_app.router, prefix="/api", tags=["Parkings"])
-app.include_router(user_app.router, prefix="/api", tags=["Users"])
-app.include_router(cv_app.router, prefix="/cv", tags=["CV"])
+app.include_router(parking_router, prefix="/api", tags=["Parkings"])
+app.include_router(user_router, prefix="/api", tags=["Users"])
+app.include_router(cv_router, prefix="/cv", tags=["CV"])
