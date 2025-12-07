@@ -1,17 +1,11 @@
 from fastapi import APIRouter, HTTPException
-import psycopg2
+from database import get_db_connection
 from pydantic import BaseModel
 
 
 router = APIRouter()
 
-conn = psycopg2.connect(
-    dbname="parkings_db",
-    user="parkings_db_user",
-    password="dxUVHnV0sqULLO73J2dxZETqne4feSK9",
-    host="localhost",
-    port="5432"
-)
+conn = get_db_connection()
 
 
 class ParkingUpdate(BaseModel):

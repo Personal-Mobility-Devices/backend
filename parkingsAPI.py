@@ -1,16 +1,10 @@
 from fastapi import APIRouter
-import psycopg2
+from database import get_db_connection
 from typing import List
 
 router = APIRouter()
 
-conn = psycopg2.connect(
-    dbname="parkings_db",
-    user="parkings_db_user",
-    password="dxUVHnV0sqULLO73J2dxZETqne4feSK9",
-    host="localhost",
-    port="5432"
-)
+conn = get_db_connection()
 
 @router.get("/parkings/all")
 def get_all_parkings():
