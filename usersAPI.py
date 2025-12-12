@@ -2,8 +2,11 @@ from fastapi import APIRouter, HTTPException
 from database import get_db_connection
 from pydantic import BaseModel
 from typing import Optional
+from passlib.context import CryptContext
 
 router = APIRouter()
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserCreate(BaseModel):
     email: str
@@ -63,6 +66,8 @@ def create_user(user: UserCreate):
     cur.execute("SELECT id FROM users WHERE email = %s", (user.email,))
     if cur.fetchone():
         raise HTTPException(status_code=400, detail="Email already exists")
+    
+    hashed_password = pwd_context.hash(user.password_hash)
 
     cur.execute(
         """
@@ -70,7 +75,7 @@ def create_user(user: UserCreate):
         VALUES (%s, %s, %s, %s)
         RETURNING id, email, phone_number, subscription_status;
         """,
-        (user.email, user.phone_number, user.password_hash, user.subscription_status)
+        (user.email, user.phone_number, hashed_password, user.subscription_status)
     )
     created_user = cur.fetchone()
     conn.commit()
