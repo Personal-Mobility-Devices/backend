@@ -31,9 +31,49 @@ class ParkingUpdate(BaseModel):
 def get_all_parkings():
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM parkings;")
-    data = cur.fetchall()
-    return data
+    cur.execute("""
+        SELECT id, description, coordinates, name, name_obj, adm_area, district, occupancy
+        FROM parkings;
+    """)
+    rows = cur.fetchall()
+
+    result = []
+    for row in rows:
+        (
+            pid,
+            description,
+            coordinates,
+            name,
+            name_obj,
+            adm_area,
+            district,
+            occupancy,
+        ) = row
+
+        coords = coordinates
+        try:
+            if isinstance(coordinates, str):
+                import json
+
+                coords = json.loads(coordinates)
+        except Exception:
+            coords = coordinates
+
+        result.append(
+            {
+                "id": pid,
+                "description": description,
+                "coordinates": coords,
+                "name": name,
+                "name_obj": name_obj,
+                "adm_area": adm_area,
+                "district": district,
+                "occupancy": occupancy,
+            }
+        )
+
+    cur.close()
+    return result
 
 @router.get("/parkings/in_area")
 def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max: float):
