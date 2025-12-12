@@ -80,22 +80,100 @@ def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max
     conn = get_db_connection()
     cur = conn.cursor()
     query = """
-        SELECT id, coordinates
+        SELECT id, description, coordinates, name, name_obj, adm_area, district, occupancy
         FROM parkings
         WHERE (coordinates->>'lat')::float BETWEEN %s AND %s
         AND   (coordinates->>'lon')::float BETWEEN %s AND %s;
     """
     cur.execute(query, (lat_min, lat_max, lon_min, lon_max))
-    data = cur.fetchall()
-    return data
+    rows = cur.fetchall()
+
+    result = []
+    for row in rows:
+        (
+            pid,
+            description,
+            coordinates,
+            name,
+            name_obj,
+            adm_area,
+            district,
+            occupancy,
+        ) = row
+
+        coords = coordinates
+        try:
+            if isinstance(coordinates, str):
+                import json
+
+                coords = json.loads(coordinates)
+        except Exception:
+            coords = coordinates
+
+        result.append(
+            {
+                "id": pid,
+                "description": description,
+                "coordinates": coords,
+                "name": name,
+                "name_obj": name_obj,
+                "adm_area": adm_area,
+                "district": district,
+                "occupancy": occupancy,
+            }
+        )
+
+    cur.close()
+    return result
 
 
 @router.get("/parking/{parking_id}")
 def get_parking(parking_id: int):
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM parkings WHERE id = %s", (parking_id,))
-    return cur.fetchone()
+    cur.execute("""
+        SELECT id, description, coordinates, name, name_obj, adm_area, district, occupancy
+        FROM parkings
+        WHERE id = %s
+    """, (parking_id,))
+
+    row = cur.fetchone()
+    if row is None:
+        cur.close()
+        raise HTTPException(status_code=404, detail="Parking not found")
+
+    (
+        pid,
+        description,
+        coordinates,
+        name,
+        name_obj,
+        adm_area,
+        district,
+        occupancy,
+    ) = row
+
+    coords = coordinates
+    try:
+        if isinstance(coordinates, str):
+            import json
+
+            coords = json.loads(coordinates)
+    except Exception:
+        coords = coordinates
+
+    cur.close()
+
+    return {
+        "id": pid,
+        "description": description,
+        "coordinates": coords,
+        "name": name,
+        "name_obj": name_obj,
+        "adm_area": adm_area,
+        "district": district,
+        "occupancy": occupancy,
+    }
 
 
 @router.get("/parking_fields/{parking_id}")
