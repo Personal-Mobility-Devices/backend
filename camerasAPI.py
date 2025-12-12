@@ -61,6 +61,16 @@ def create_camera(camera: CameraCreate):
     fields = ["id", "description", "cv_data"]
     return dict(zip(fields, created))
 
+@router.delete("/cameras/{camera_id}")
+def delete_camera(camera_id: int):
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM cameras WHERE id = %s RETURNING id;", (camera_id,) )
+    deleted = cur.fetchone()
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="Camera not found")
+    conn.commit()
 
 @router.patch("/cameras/{camera_id}")
 def update_camera(camera_id: int, camera: CameraUpdate):
