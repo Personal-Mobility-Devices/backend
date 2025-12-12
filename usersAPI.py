@@ -3,6 +3,7 @@ from database import get_db_connection
 from pydantic import BaseModel
 from typing import Optional
 from passlib.context import CryptContext
+import psycopg2
 
 router = APIRouter()
 
@@ -18,6 +19,9 @@ class UserUpdate(BaseModel):
     phone_number: Optional[str] = None
     subscription_status: Optional[bool] = None
 
+class FavoriteParkingAdd(BaseModel):
+    id_user: int
+    id_parking: int
 
 @router.get("/users/all")
 def get_all_users():
@@ -152,20 +156,3 @@ def get_users_stats():
         "subscription_share": share
     }
 
-
-@router.get("/users/{user_id}/favorites")
-def get_user_favorites(user_id: int):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT 1 FROM users WHERE id = %s", (user_id,))
-    if cur.fetchone() is None:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    query = """
-        SELECT p.id, p.name, p.coordinates
-        FROM favorite_parkings fp
-        JOIN parkings p ON p.id = fp.id_parking
-        WHERE fp.id_user = %s;
-    """
-    cur.execute(query, (user_id,))
-    return cur.fetchall()
