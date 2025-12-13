@@ -319,3 +319,23 @@ def update_parking(parking_id: int, parking: ParkingUpdate):
 
     fields = ["id", "name", "occupancy"]
     return dict(zip(fields, updated))
+
+@router.delete("/parking/{parking_id}")
+def delete_parking(parking_id: int):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        DELETE FROM parkings
+        WHERE id = %s
+        RETURNING id;
+    """, (parking_id,))
+
+    deleted = cur.fetchone()
+    conn.commit()
+    cur.close()
+
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="Parking not found")
+
+    return {"status": "deleted", "id": deleted[0]}
