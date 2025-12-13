@@ -1,3 +1,4 @@
 pgadmin pswrd: 228336
 __pycache__/
-env/   
+env/
+.idea/

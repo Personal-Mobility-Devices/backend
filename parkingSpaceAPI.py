@@ -89,3 +89,23 @@ def update_parking_space(space_id: str, space_update: ParkingSpaceUpdate):
 
     fields = ["id", "id_parking"]
     return dict(zip(fields, updated))
+
+@router.delete("/parking_space/{space_id}")
+def delete_parking_space(space_id: str):
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    cur.execute("""
+        DELETE FROM parking_spaces
+        WHERE id = %s
+        RETURNING id;
+    """, (space_id,))
+
+    deleted = cur.fetchone()
+    conn.commit()
+    cur.close()
+
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="Parking space not found")
+
+    return {"status": "deleted", "id": deleted[0]}

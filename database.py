@@ -20,4 +20,3 @@ def get_db_connection():
         host=os.getenv("DB_HOST", "localhost"),
         port=os.getenv("DB_PORT", "5432")
     )
-
