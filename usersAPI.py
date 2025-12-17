@@ -25,67 +25,79 @@ class FavoriteParkingAdd(BaseModel):
 
 @router.get("/users/all")
 def get_all_users():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, email, phone_number, subscription_status FROM users;")
-    return cur.fetchall()
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, email, phone_number, subscription_status FROM users;")
+                return cur.fetchall()
+    except psycopg2.Error:
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.get("/user/{user_id}")
 def get_user(user_id: int):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT id, email, phone_number, subscription_status
-        FROM users
-        WHERE id = %s
-        """,
-        (user_id,)
-    )
-    row = cur.fetchone()
-    if row is None:
-        return {"error": "User not found"}
-    return row
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, email, phone_number, subscription_status
+                    FROM users
+                    WHERE id = %s
+                    """,
+                    (user_id,)
+                )
+                row = cur.fetchone()
+                if row is None:
+                    return {"error": "User not found"}
+        return row
+    except psycopg2.Error:
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.get("/user_fields/{user_id}")
 def get_user_fields(user_id: int, fields: str):
-    conn = get_db_connection()
-    selected = ",".join([f.strip() for f in fields.split(",")])
-    cur = conn.cursor()
-    cur.execute(f"SELECT {selected} FROM users WHERE id = %s", (user_id,))
-    row = cur.fetchone()
-    if row is None:
-        return {"error": "User not found"}
-    result = dict(zip(selected.split(","), row))
-    return result
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                selected = ",".join([f.strip() for f in fields.split(",")])
+                cur = conn.cursor()
+                cur.execute(f"SELECT {selected} FROM users WHERE id = %s", (user_id,))
+                row = cur.fetchone()
+                if row is None:
+                    return {"error": "User not found"}
+        result = dict(zip(selected.split(","), row))
+        return result
+    except psycopg2.Error:
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.post("/users")
 def create_user(user: UserCreate):
-    conn = get_db_connection()
-    cur = conn.cursor()
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id FROM users WHERE email = %s", (user.email,))
+                if cur.fetchone():
+                    raise HTTPException(status_code=400, detail="Email already exists")
 
-    cur.execute("SELECT id FROM users WHERE email = %s", (user.email,))
-    if cur.fetchone():
-        raise HTTPException(status_code=400, detail="Email already exists")
-    
-    hashed_password = pwd_context.hash(user.password_hash)
+                hashed_password = pwd_context.hash(user.password_hash)
 
-    cur.execute(
-        """
-        INSERT INTO users (email, phone_number, password_hash, subscription_status)
-        VALUES (%s, %s, %s, %s)
-        RETURNING id, email, phone_number, subscription_status;
-        """,
-        (user.email, user.phone_number, hashed_password, user.subscription_status)
-    )
-    created_user = cur.fetchone()
-    conn.commit()
+                cur.execute(
+                    """
+                    INSERT INTO users (email, phone_number, password_hash, subscription_status)
+                    VALUES (%s, %s, %s, %s)
+                    RETURNING id, email, phone_number, subscription_status;
+                    """,
+                    (user.email, user.phone_number, hashed_password, user.subscription_status)
+                )
+                created_user = cur.fetchone()
+                conn.commit()
 
-    fields = ["id", "email", "phone_number", "subscription_status"]
-    return dict(zip(fields, created_user))
+        fields = ["id", "email", "phone_number", "subscription_status"]
+        return dict(zip(fields, created_user))
+    except psycopg2.Error:
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.put("/user/{user_id}")
@@ -105,54 +117,61 @@ def update_user(user_id: int, user: UserUpdate):
 
     params.append(user_id)
 
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        f"""
-        UPDATE users
-        SET {", ".join(updates)}
-        WHERE id = %s
-        RETURNING id, email, phone_number, subscription_status;
-        """,
-        params
-    )
-    updated = cur.fetchone()
-    if updated is None:
-        raise HTTPException(status_code=404, detail="User not found")
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"""
+                    UPDATE users
+                    SET {", ".join(updates)}
+                    WHERE id = %s
+                    RETURNING id, email, phone_number, subscription_status;
+                    """,
+                    params
+                )
+                updated = cur.fetchone()
+                if updated is None:
+                    raise HTTPException(status_code=404, detail="User not found")
 
-    conn.commit()
-    fields = ["id", "email", "phone_number", "subscription_status"]
-    return dict(zip(fields, updated))
+                conn.commit()
+        fields = ["id", "email", "phone_number", "subscription_status"]
+        return dict(zip(fields, updated))
+    except psycopg2.Error:
+        raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.delete("/user/{user_id}", status_code=204)
 def delete_user(user_id: int):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM users WHERE id = %s RETURNING id;", (user_id,))
-    deleted = cur.fetchone()
-    if deleted is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    conn.commit()
-
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM users WHERE id = %s RETURNING id;", (user_id,))
+                deleted = cur.fetchone()
+                if deleted is None:
+                    raise HTTPException(status_code=404, detail="User not found")
+            conn.commit()
+    except psycopg2.Error:
+        raise HTTPException(status_code=400, detail="Failed to delete user")
 
 @router.get("/users/stats")
 def get_users_stats():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        SELECT COUNT(*) AS total,
-               SUM(CASE WHEN subscription_status THEN 1 ELSE 0 END) AS subscribers
-        FROM users;
-        """
-    )
-    total, subscribers = cur.fetchone()
-    subscribers = subscribers or 0
-    share = (subscribers / total) if total else 0.0
-    return {
-        "total_users": total,
-        "subscribers": subscribers,
-        "subscription_share": share
-    }
-
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT COUNT(*) AS total,
+                           SUM(CASE WHEN subscription_status THEN 1 ELSE 0 END) AS subscribers
+                    FROM users;
+                    """
+                )
+                total, subscribers = cur.fetchone()
+        subscribers = subscribers or 0
+        share = (subscribers / total) if total else 0.0
+        return {
+            "total_users": total,
+            "subscribers": subscribers,
+            "subscription_share": share
+        }
+    except psycopg2.Error:
+        raise HTTPException(status_code=500, detail="Database error")
