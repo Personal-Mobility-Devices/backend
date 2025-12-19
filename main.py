@@ -1,10 +1,10 @@
 from fastapi import FastAPI
-from parkingsAPI import router as parking_router
-from usersAPI import router as user_router
-from cvAPI import router as cv_router
-from parkingSpaceAPI import router as parking_space_router
-from favoriteParkingsAPI import router as favorite_parkings_router
-from camerasAPI import router as cameras_router
+from api.parkingsAPI import router as parking_router
+from api.usersAPI import router as user_router
+from api.cvAPI import router as cv_router
+from api.parkingSpaceAPI import router as parking_space_router
+from api.favoriteParkingsAPI import router as favorite_parkings_router
+from api.camerasAPI import router as cameras_router
 
 app = FastAPI()
 

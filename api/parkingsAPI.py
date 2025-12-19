@@ -1,14 +1,18 @@
-import psycopg2
-from fastapi import APIRouter, HTTPException
-from database import get_db_connection
-from pydantic import BaseModel
 from typing import Optional
 
+import psycopg2
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+from dao.parkings_dao import ParkingsDAO
+
 router = APIRouter()
+
 
 class Coordinates(BaseModel):
     lat: float
     lon: float
+
 
 class ParkingCreate(BaseModel):
     description: str
@@ -17,7 +21,8 @@ class ParkingCreate(BaseModel):
     name_obj: Optional[str] = None
     adm_area: Optional[str] = None
     district: Optional[str] = None
-    occupancy: Optional[str] = None # В БД строка, возможно позже изменим на int
+    occupancy: Optional[str] = None  # В БД строка, возможно позже изменим на int
+
 
 class ParkingUpdate(BaseModel):
     description: Optional[str] = None
@@ -28,17 +33,11 @@ class ParkingUpdate(BaseModel):
     district: Optional[str] = None
     occupancy: Optional[str] = None
 
+
 @router.get("/parkings/all")
 def get_all_parkings():
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT id, description, coordinates, name, name_obj, adm_area, district, occupancy
-                    FROM parkings;
-                """)
-                rows = cur.fetchall()
-
+        rows = ParkingsDAO.get_all()
         result = []
         for row in rows:
             (
@@ -77,20 +76,11 @@ def get_all_parkings():
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
+
 @router.get("/parkings/in_area")
 def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max: float):
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                query = """
-                    SELECT id, description, coordinates, name, name_obj, adm_area, district, occupancy
-                    FROM parkings
-                    WHERE (coordinates->>'lat')::float BETWEEN %s AND %s
-                    AND   (coordinates->>'lon')::float BETWEEN %s AND %s;
-                """
-                cur.execute(query, (lat_min, lat_max, lon_min, lon_max))
-                rows = cur.fetchall()
-
+        rows = ParkingsDAO.get_in_area(lat_min, lat_max, lon_min, lon_max)
         result = []
         for row in rows:
             (
@@ -133,18 +123,10 @@ def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max
 @router.get("/parking/{parking_id}")
 def get_parking(parking_id: int):
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT id, description, coordinates, name, name_obj, adm_area, district, occupancy
-                    FROM parkings
-                    WHERE id = %s
-                """, (parking_id,))
+        row = ParkingsDAO.get_by_id(parking_id)
 
-                row = cur.fetchone()
-                if row is None:
-                    cur.close()
-                    raise HTTPException(status_code=404, detail="Parking not found")
+        if row is None:
+            raise HTTPException(status_code=404, detail="Parking not found")
 
         (
             pid,
@@ -179,36 +161,30 @@ def get_parking(parking_id: int):
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
+
 @router.get("/parking_fields/{parking_id}")
 def get_parking_fields(parking_id: int, fields: str):
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                selected = ",".join([f.strip() for f in fields.split(",")])
-                cur.execute(f"SELECT {selected} FROM parkings WHERE id = %s", (parking_id,))
-                row = cur.fetchone()
-                if row is None:
-                    return {"error": "Parking not found"}
-        result = dict(zip(selected.split(","), row))
+        selected_fields = ",".join([f.strip() for f in fields.split(",")])
+        row = ParkingsDAO.get_fields(parking_id, selected_fields)
+
+        if row is None:
+            return {"error": "Parking not found"}
+
+        result = dict(zip(selected_fields.split(","), row))
         return result
+
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
+
 
 # тут поправить если мы храним координаты как [число, число], а не, как я, в виде словаря
 @router.get("/parkinggeojson/{parking_id}")
 def get_parking_geojson(parking_id: int):
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    SELECT id, description, coordinates, name, name_obj, adm_area, district, occupancy
-                    FROM parkings
-                    WHERE id = %s
-                """, (parking_id,))
-
-                row = cur.fetchone()
-                if row is None:
-                    return {"error": "Parking not found"}
+        row = ParkingsDAO.get_geojson(parking_id)
+        if row is None:
+            return {"error": "Parking not found"}
 
         (
             id,
@@ -245,38 +221,24 @@ def get_parking_geojson(parking_id: int):
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
+
 @router.post("/parkings", status_code=201)
 def create_parking(parking: ParkingCreate):
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-
-                # psycopg2 автоматически преобразует BaseModel "Coordinates" в JSONB при использовании %s
-                query = """
-                    INSERT INTO parkings (description, coordinates, name, name_obj, adm_area, district, occupancy)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id, name, coordinates;
-                """
-                try:
-                    cur.execute(query, (
-                        parking.description,
-                        parking.coordinates.model_dump_json(), # Используем json-строку для jsonb поля
-                        parking.name,
-                        parking.name_obj,
-                        parking.adm_area,
-                        parking.district,
-                        parking.occupancy
-                    ))
-                    created_parking = cur.fetchone()
-                    conn.commit()
-                except Exception as e:
-                    conn.rollback()
-                    raise HTTPException(status_code=400, detail=str(e))
-
+        created_parking = ParkingsDAO.create(
+            parking.description,
+            parking.coordinates.model_dump_json(),  # Используем json-строку для jsonb поля
+            parking.name,
+            parking.name_obj,
+            parking.adm_area,
+            parking.district,
+            parking.occupancy
+        )
         fields = ["id", "name", "coordinates"]
         return dict(zip(fields, created_parking))
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
+
 
 @router.put("/parking/{parking_id}")
 def update_parking(parking_id: int, parking: ParkingUpdate):
@@ -312,46 +274,17 @@ def update_parking(parking_id: int, parking: ParkingUpdate):
     params.append(parking_id)  # ID в конец параметров для WHERE условия
 
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-
-                query = f"""
-                    UPDATE parkings
-                    SET {", ".join(updates)}
-                    WHERE id = %s
-                    RETURNING id, name, occupancy;
-                """
-
-                cur.execute(query, params)
-                updated = cur.fetchone()
-                conn.commit()
-
-                if updated is None:
-                    raise HTTPException(status_code=404, detail="Parking not found")
-
+        updated = ParkingsDAO.update(updates, params)
         fields = ["id", "name", "occupancy"]
         return dict(zip(fields, updated))
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
+
 @router.delete("/parking/{parking_id}")
 def delete_parking(parking_id: int):
     try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-
-                cur.execute("""
-                    DELETE FROM parkings
-                    WHERE id = %s
-                    RETURNING id;
-                """, (parking_id,))
-
-                deleted = cur.fetchone()
-                conn.commit()
-
-                if deleted is None:
-                    raise HTTPException(status_code=404, detail="Parking not found")
-
+        deleted = ParkingsDAO.delete(parking_id)
         return {"status": "deleted", "id": deleted[0]}
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
