@@ -6,68 +6,55 @@ from database import get_db_connection
 
 class ParkingSpaceDAO:
     @staticmethod
-    def get_all():
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT * FROM parking_spaces;")
-                return cur.fetchall()
+    async def get_all():
+        pool = await get_db_connection()
+        async with pool.acquire() as conn:
+            return await conn.fetch("SELECT * FROM parking_spaces;")
 
     @staticmethod
-    def get_by_id(space_id: str):
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                # psycopg2 умеет работать с UUID напрямую
-                cur.execute("SELECT * FROM parking_spaces WHERE id = %s", (space_id,))
-                return cur.fetchone()
+    async def get_by_id(space_id: str):
+        pool = await get_db_connection()
+        async with pool.acquire() as conn:
+            # asyncpg умеет работать с UUID напрямую
+            return await conn.fetchrow("SELECT * FROM parking_spaces WHERE id = $1", space_id)
 
     @staticmethod
-    def get_all_by_parking_id(parking_id: int):
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT * FROM parking_spaces WHERE id_parking = %s", (parking_id,))
-                return cur.fetchall()
+    async def get_all_by_parking_id(parking_id: int):
+        pool = await get_db_connection()
+        async with pool.acquire() as conn:
+            return await conn.fetch("SELECT * FROM parking_spaces WHERE id_parking = $1", parking_id)
 
     @staticmethod
-    def create(coordinates: str, id_parking: int):
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                query = """
-                    INSERT INTO parking_spaces (coordinates, id_parking)
-                    VALUES (%s, %s)
-                    RETURNING id, id_parking;
-                """
-                try:
-                    cur.execute(query, (coordinates, id_parking))
-                    created_space = cur.fetchone()
-                    conn.commit()
-                    return created_space
-                except psycopg2.errors.ForeignKeyViolation:
-                    conn.rollback()
-                    raise HTTPException(status_code=404, detail="Parent Parking ID not found")
+    async def create(coordinates: str, id_parking: int):
+        pool = await get_db_connection()
+        async with pool.acquire() as conn:
+            query = """
+                INSERT INTO parking_spaces (coordinates, id_parking)
+                VALUES ($1, $2)
+                RETURNING id, id_parking;
+            """
+            try:
+                return await conn.fetchrow(query, coordinates, id_parking)
+            except psycopg2.errors.ForeignKeyViolation:
+                raise HTTPException(status_code=404, detail="Parent Parking ID not found")
 
     @staticmethod
-    def update(space_id: str, coordinates: str):
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                query = """
-                    UPDATE parking_spaces
-                    SET coordinates = %s
-                    WHERE id = %s
-                    RETURNING id, id_parking;
-                """
-                cur.execute(query, (coordinates, space_id))
-                updated = cur.fetchone()
-                conn.commit()
-                return updated
+    async def update(space_id: str, coordinates: str):
+        pool = await get_db_connection()
+        async with pool.acquire() as conn:
+            query = """
+                UPDATE parking_spaces
+                SET coordinates = $1
+                WHERE id = $2
+                RETURNING id, id_parking;
+            """
+            return await conn.fetchrow(query, coordinates, space_id)
 
     @staticmethod
-    def delete(space_id: str):
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM parking_spaces WHERE id = %s RETURNING id;",
-                    (space_id,)
-                )
-                deleted = cur.fetchone()
-                conn.commit()
-                return deleted
+    async def delete(space_id: str):
+        pool = await get_db_connection()
+        async with pool.acquire() as conn:
+            return await conn.fetchrow(
+                "DELETE FROM parking_spaces WHERE id = $1 RETURNING id;",
+                space_id
+            )

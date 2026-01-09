@@ -8,17 +8,17 @@ router = APIRouter()
 
 
 @router.get("/parking_spaces/all")
-def get_all_parking_spaces():
+async def get_all_parking_spaces():
     try:
-        return ParkingSpaceDAO.get_all()
+        return await ParkingSpaceDAO.get_all()
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.get("/parking_space/{space_id}")
-def get_parking_space_by_id(space_id: str):  # UUID в БД, поэтому передаем как строку
+async def get_parking_space_by_id(space_id: str):  # UUID в БД, поэтому передаем как строку
     try:
-        row = ParkingSpaceDAO.get_by_id(space_id)
+        row = await ParkingSpaceDAO.get_by_id(space_id)
         if row is None:
             raise HTTPException(status_code=404, detail="Parking space not found")
         return row
@@ -27,17 +27,17 @@ def get_parking_space_by_id(space_id: str):  # UUID в БД, поэтому пе
 
 
 @router.get("/parking_spaces/by_parking/{parking_id}")
-def get_parking_spaces_by_parking_id(parking_id: int):
+async def get_parking_spaces_by_parking_id(parking_id: int):
     try:
-        return ParkingSpaceDAO.get_all_by_parking_id(parking_id)
+        return await ParkingSpaceDAO.get_all_by_parking_id(parking_id)
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
 
 @router.post("/parking_space", status_code=201)
-def create_parking_space(space: ParkingSpaceCreate):
+async def create_parking_space(space: ParkingSpaceCreate):
     try:
-        created_space = ParkingSpaceDAO.create(
+        created_space = await ParkingSpaceDAO.create(
             space.coordinates.model_dump_json(),
             space.id_parking
         )
@@ -48,12 +48,12 @@ def create_parking_space(space: ParkingSpaceCreate):
 
 
 @router.put("/parking_space/{space_id}")
-def update_parking_space(space_id: str, space_update: ParkingSpaceUpdate):
+async def update_parking_space(space_id: str, space_update: ParkingSpaceUpdate):
     if space_update.coordinates is None:
         raise HTTPException(status_code=400, detail="No fields to update")
 
     try:
-        updated = ParkingSpaceDAO.update(space_id, space_update.coordinates.model_dump_json())
+        updated = await ParkingSpaceDAO.update(space_id, space_update.coordinates.model_dump_json())
         if updated is None:
             raise HTTPException(status_code=404, detail="Parking space not found")
 
@@ -64,9 +64,9 @@ def update_parking_space(space_id: str, space_update: ParkingSpaceUpdate):
 
 
 @router.delete("/parking_space/{space_id}")
-def delete_parking_space(space_id: str):
+async def delete_parking_space(space_id: str):
     try:
-        deleted = ParkingSpaceDAO.delete(space_id)
+        deleted = await ParkingSpaceDAO.delete(space_id)
         if deleted is None:
             raise HTTPException(status_code=404, detail="Parking space not found")
         return {"status": "deleted", "id": deleted[0]}
