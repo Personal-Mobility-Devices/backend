@@ -9,9 +9,9 @@ router = APIRouter()
 
 
 @router.get("/cameras")
-def get_cameras():
+async def get_cameras():
     try:
-        rows = CamerasDAO.get_all()
+        rows = await CamerasDAO.get_all()
         fields = ["id", "description", "cv_data"]
         return [dict(zip(fields, row)) for row in rows]
     except psycopg2.Error:
@@ -19,9 +19,9 @@ def get_cameras():
 
 
 @router.get("/cameras/{camera_id}")
-def get_camera(camera_id: int):
+async def get_camera(camera_id: int):
     try:
-        row = CamerasDAO.get_camera(camera_id)
+        row = await CamerasDAO.get_camera(camera_id)
         if row is None:
             raise HTTPException(status_code=404, detail="Camera not found")
         fields = ["id", "description", "cv_data"]
@@ -31,9 +31,9 @@ def get_camera(camera_id: int):
 
 
 @router.post("/cameras", status_code=201)
-def create_camera(camera: CameraCreate):
+async def create_camera(camera: CameraCreate):
     try:
-        created = CamerasDAO.create(camera.description, camera.cv_data)
+        created = await CamerasDAO.create(camera.description, camera.cv_data)
         fields = ["id", "description", "cv_data"]
         return dict(zip(fields, created))
     except psycopg2.Error:
@@ -41,9 +41,9 @@ def create_camera(camera: CameraCreate):
 
 
 @router.delete("/cameras/{camera_id}")
-def delete_camera(camera_id: int):
+async def delete_camera(camera_id: int):
     try:
-        deleted = CamerasDAO.delete(camera_id)
+        deleted = await CamerasDAO.delete(camera_id)
         if deleted is None:
             raise HTTPException(status_code=404, detail="Camera not found")
         return {"status": "deleted", "id": deleted[0]}
@@ -52,24 +52,30 @@ def delete_camera(camera_id: int):
 
 
 @router.patch("/cameras/{camera_id}")
-def update_camera(camera_id: int, camera: CameraUpdate):
+async def update_camera(camera_id: int, camera: CameraUpdate):
     updates = []
     params = []
+    idx = 1
 
     if camera.description is not None:
-        updates.append("description = %s")
+        updates.append(f"description = ${idx}")
         params.append(camera.description)
+        idx += 1
     if camera.cv_data is not None:
-        updates.append("cv_data = %s")
+        updates.append(f"cv_data = ${idx}")
         params.append(Json(camera.cv_data))
+        idx += 1
 
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
     params.append(camera_id)
 
+    # В asyncpg нет %s, как это было в psycopg2, для передачи аргументов используется $1, $2 и так далее
+    where_idx = idx  # текущий порядковый номер idx для аргумента
+
     try:
-        updated = CamerasDAO.update(updates, params)
+        updated = await CamerasDAO.update(updates, where_idx, params)
         if updated is None:
             raise HTTPException(status_code=404, detail="Camera not found")
         fields = ["id", "description", "cv_data"]

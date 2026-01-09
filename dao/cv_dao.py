@@ -4,30 +4,22 @@ from database import get_db_connection
 class CvDAO:
 
     @staticmethod
-    def get_data(id_cam: int):
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT cv_data FROM cameras WHERE id = %s", (id_cam,))
-                return cur.fetchone()
+    async def get_data(id_cam: int):
+        pool = await get_db_connection()
+        async with pool.acquire() as conn:
+            return await conn.fetchrow("SELECT cv_data FROM cameras WHERE id = $1", id_cam)
 
     @staticmethod
-    def update_occupancy(id_parking: int, occupancy: int):
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "UPDATE parkings SET occupancy = %s WHERE id = %s",
-                    (occupancy, id_parking)
-                )
-                row_count = cur.rowcount
-                conn.commit()
-                return row_count
+    async def update_occupancy(id_parking: int, occupancy: int):
+        pool = await get_db_connection()
+        async with pool.acquire() as conn:
+            # Возвращает строки вида "UPDATE 3" - берем число строк из строки и преобразуем в int
+            result = conn.execute("UPDATE parkings SET occupancy = $1 WHERE id = $2", occupancy, id_parking)
+            row_count = int(result.split()[-1])
+            return row_count
 
     @staticmethod
-    def get_status(id_parking: int):
-        with get_db_connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT occupancy FROM parkings WHERE id = %s",
-                    (id_parking,)
-                )
-                return cur.fetchone()
+    async def get_status(id_parking: int):
+        pool = await get_db_connection()
+        async with pool.acquire() as conn:
+            return await conn.fetchrow("SELECT occupancy FROM parkings WHERE id = $1", id_parking)
