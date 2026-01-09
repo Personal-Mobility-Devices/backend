@@ -1,32 +1,13 @@
-from typing import Optional
-
 import psycopg2
 from fastapi import APIRouter, HTTPException
 from passlib.context import CryptContext
-from pydantic import BaseModel
 
 from dao.users_dao import UsersDAO
+from schemas.userModels import UserCreate, UserUpdate
 
 router = APIRouter()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-class UserCreate(BaseModel):
-    email: str
-    phone_number: Optional[str] = None
-    password_hash: str
-    subscription_status: bool = False
-
-
-class UserUpdate(BaseModel):
-    phone_number: Optional[str] = None
-    subscription_status: Optional[bool] = None
-
-
-class FavoriteParkingAdd(BaseModel):
-    id_user: int
-    id_parking: int
 
 
 @router.get("/users/all")

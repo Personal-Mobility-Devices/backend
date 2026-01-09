@@ -1,27 +1,11 @@
-from typing import Any, Dict, Optional
-
 import psycopg2
 from fastapi import APIRouter, HTTPException
 from psycopg2.extras import Json
-from pydantic import BaseModel
 
 from dao.cameras_dao import CamerasDAO
+from schemas.cameraModels import CameraCreate, CameraUpdate
 
 router = APIRouter()
-
-
-class CameraBase(BaseModel):
-    description: str
-    cv_data: Dict[str, Any]
-
-
-class CameraCreate(CameraBase):
-    pass
-
-
-class CameraUpdate(BaseModel):
-    description: Optional[str] = None
-    cv_data: Optional[Dict[str, Any]] = None
 
 
 @router.get("/cameras")

@@ -1,15 +1,12 @@
 import psycopg2
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from dao.cv_dao import CvDAO
+from schemas.cvModels import ParkingUpdate
+
 from redis_client import redis_client as redis
 
 router = APIRouter()
-
-
-class ParkingUpdate(BaseModel):
-    occupancy: int
 
 
 @router.get("/data/{id_cam}")

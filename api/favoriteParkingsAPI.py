@@ -1,15 +1,10 @@
 import psycopg2
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from dao.favorite_parkings_dao import FavoriteParkingsDAO
+from schemas.favoriteParkingModels import FavoriteParkingAdd
 
 router = APIRouter()
-
-
-class FavoriteParkingAdd(BaseModel):
-    id_user: int
-    id_parking: int
 
 
 @router.get("/favorites/{user_id}")

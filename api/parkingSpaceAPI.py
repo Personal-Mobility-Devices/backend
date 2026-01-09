@@ -1,26 +1,10 @@
-from typing import Optional
-
 import psycopg2
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from dao.parking_space_dao import ParkingSpaceDAO
+from schemas.parkingSpaceModels import ParkingSpaceCreate, ParkingSpaceUpdate
 
 router = APIRouter()
-
-
-class Coordinates(BaseModel):
-    lat: float
-    lon: float
-
-
-class ParkingSpaceCreate(BaseModel):
-    coordinates: Coordinates
-    id_parking: int
-
-
-class ParkingSpaceUpdate(BaseModel):
-    coordinates: Optional[Coordinates] = None
 
 
 @router.get("/parking_spaces/all")
