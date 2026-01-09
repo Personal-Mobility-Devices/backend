@@ -30,6 +30,20 @@ class UsersDAO:
                 return cur.fetchone()
 
     @staticmethod
+    def get_auth_data(email: str):
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT id, password_hash
+                    FROM users
+                    WHERE email = %s
+                    """,
+                    (email,)
+                )
+                return cur.fetchone()
+
+    @staticmethod
     def get_fields(user_id: int, selected_fields: str):
         allowed_fields = {"id", "email", "phone_number", "subscription_status"}
         fields = [field.strip() for field in selected_fields.split(",") if field.strip()]

@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     db_host: str = Field(default="localhost", alias="DB_HOST")
     db_port: str = Field(default="5432", alias="DB_PORT")
     redis_url: Optional[str] = Field(default=None, alias="REDIS_URL")
+    jwt_secret: str = Field(default="change_me", alias="JWT_SECRET")
+    jwt_algorithm: str = Field(default="HS256", alias="JWT_ALG")
+    jwt_access_expires_minutes: int = Field(default=15, alias="JWT_ACCESS_EXPIRES_MIN")
+    jwt_refresh_expires_days: int = Field(default=7, alias="JWT_REFRESH_EXPIRES_DAYS")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
