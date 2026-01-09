@@ -1,6 +1,7 @@
 from typing import Optional
 
 from fastapi import HTTPException
+from psycopg2 import sql
 
 from database import get_db_connection
 
@@ -30,9 +31,18 @@ class UsersDAO:
 
     @staticmethod
     def get_fields(user_id: int, selected_fields: str):
+        allowed_fields = {"id", "email", "phone_number", "subscription_status"}
+        fields = [field.strip() for field in selected_fields.split(",") if field.strip()]
+        invalid_fields = set(fields) - allowed_fields
+        if not fields or invalid_fields:
+            raise HTTPException(status_code=400, detail="Invalid field selection")
+
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute(f"SELECT {selected_fields} FROM users WHERE id = %s", (user_id,))
+                query = sql.SQL("SELECT {fields} FROM users WHERE id = %s").format(
+                    fields=sql.SQL(", ").join(sql.Identifier(field) for field in fields)
+                )
+                cur.execute(query, (user_id,))
                 return cur.fetchone()
 
     @staticmethod
