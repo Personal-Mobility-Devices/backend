@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from database import get_db_connection
 
 
+# Изменить запросы под PostGIS (Точно на поиск в области, создание и обновление парковки)
 class ParkingsDAO:
 
     @staticmethod
