@@ -12,7 +12,7 @@ class ParkingCreate(BaseModel):
     name_obj: Optional[str] = None
     adm_area: Optional[str] = None
     district: Optional[str] = None
-    occupancy: Optional[str] = None  # В БД строка, возможно позже изменим на int
+    occupancy: Optional[int] = None  # В БД строка, возможно позже изменим на int
 
 
 class ParkingUpdate(BaseModel):
@@ -22,4 +22,4 @@ class ParkingUpdate(BaseModel):
     name_obj: Optional[str] = None
     adm_area: Optional[str] = None
     district: Optional[str] = None
-    occupancy: Optional[str] = None
+    occupancy: Optional[int] = None
