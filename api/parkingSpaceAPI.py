@@ -16,7 +16,7 @@ def get_all_parking_spaces():
 
 
 @router.get("/parking_space/{space_id}")
-def get_parking_space_by_id(space_id: str):  # UUID в БД, поэтому передаем как строку
+def get_parking_space_by_id(space_id: str):
     try:
         row = ParkingSpaceDAO.get_by_id(space_id)
         if row is None:
@@ -37,12 +37,11 @@ def get_parking_spaces_by_parking_id(parking_id: int):
 @router.post("/parking_space", status_code=201)
 def create_parking_space(space: ParkingSpaceCreate):
     try:
-        created_space = ParkingSpaceDAO.create(
-            space.coordinates.model_dump_json(),
-            space.id_parking
+        return ParkingSpaceDAO.create(
+            lat=space.coordinates.lat,
+            lon=space.coordinates.lon,
+            id_parking=space.id_parking,
         )
-        fields = ["id", "id_parking"]
-        return dict(zip(fields, created_space))
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
@@ -53,12 +52,14 @@ def update_parking_space(space_id: str, space_update: ParkingSpaceUpdate):
         raise HTTPException(status_code=400, detail="No fields to update")
 
     try:
-        updated = ParkingSpaceDAO.update(space_id, space_update.coordinates.model_dump_json())
+        updated = ParkingSpaceDAO.update(
+            space_id=space_id,
+            lat=space_update.coordinates.lat,
+            lon=space_update.coordinates.lon,
+        )
         if updated is None:
             raise HTTPException(status_code=404, detail="Parking space not found")
-
-        fields = ["id", "id_parking"]
-        return dict(zip(fields, updated))
+        return updated
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 

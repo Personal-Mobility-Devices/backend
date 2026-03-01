@@ -7,45 +7,25 @@ from schemas.parkingModels import ParkingCreate, ParkingUpdate
 router = APIRouter()
 
 
+def _row_to_dict(row) -> dict:
+    pid, description, lon, lat, name, name_obj, adm_area, district, occupancy = row
+    return {
+        "id": pid,
+        "description": description,
+        "coordinates": {"lon": lon, "lat": lat},
+        "name": name,
+        "name_obj": name_obj,
+        "adm_area": adm_area,
+        "district": district,
+        "occupancy": occupancy,
+    }
+
+
 @router.get("/parkings/all")
 def get_all_parkings():
     try:
         rows = ParkingsDAO.get_all()
-        result = []
-        for row in rows:
-            (
-                pid,
-                description,
-                coordinates,
-                name,
-                name_obj,
-                adm_area,
-                district,
-                occupancy,
-            ) = row
-
-            coords = coordinates
-            try:
-                if isinstance(coordinates, str):
-                    import json
-
-                    coords = json.loads(coordinates)
-            except Exception:
-                coords = coordinates
-
-            result.append(
-                {
-                    "id": pid,
-                    "description": description,
-                    "coordinates": coords,
-                    "name": name,
-                    "name_obj": name_obj,
-                    "adm_area": adm_area,
-                    "district": district,
-                    "occupancy": occupancy,
-                }
-            )
-        return result
+        return [_row_to_dict(row) for row in rows]
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
@@ -54,41 +34,7 @@ def get_all_parkings():
 def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max: float):
     try:
         rows = ParkingsDAO.get_in_area(lat_min, lat_max, lon_min, lon_max)
-        result = []
-        for row in rows:
-            (
-                pid,
-                description,
-                coordinates,
-                name,
-                name_obj,
-                adm_area,
-                district,
-                occupancy,
-            ) = row
-
-            coords = coordinates
-            try:
-                if isinstance(coordinates, str):
-                    import json
-
-                    coords = json.loads(coordinates)
-            except Exception:
-                coords = coordinates
-
-            result.append(
-                {
-                    "id": pid,
-                    "description": description,
-                    "coordinates": coords,
-                    "name": name,
-                    "name_obj": name_obj,
-                    "adm_area": adm_area,
-                    "district": district,
-                    "occupancy": occupancy,
-                }
-            )
-        return result
+        return [_row_to_dict(row) for row in rows]
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
@@ -97,40 +43,9 @@ def get_parkings_in_area(lat_min: float, lat_max: float, lon_min: float, lon_max
 def get_parking(parking_id: int):
     try:
         row = ParkingsDAO.get_by_id(parking_id)
-
         if row is None:
             raise HTTPException(status_code=404, detail="Parking not found")
-
-        (
-            pid,
-            description,
-            coordinates,
-            name,
-            name_obj,
-            adm_area,
-            district,
-            occupancy,
-        ) = row
-
-        coords = coordinates
-        try:
-            if isinstance(coordinates, str):
-                import json
-
-                coords = json.loads(coordinates)
-        except Exception:
-            coords = coordinates
-
-        return {
-            "id": pid,
-            "description": description,
-            "coordinates": coords,
-            "name": name,
-            "name_obj": name_obj,
-            "adm_area": adm_area,
-            "district": district,
-            "occupancy": occupancy,
-        }
+        return _row_to_dict(row)
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
@@ -140,18 +55,13 @@ def get_parking_fields(parking_id: int, fields: str):
     try:
         selected_fields = ",".join([f.strip() for f in fields.split(",")])
         row = ParkingsDAO.get_fields(parking_id, selected_fields)
-
         if row is None:
             return {"error": "Parking not found"}
-
-        result = dict(zip(selected_fields.split(","), row))
-        return result
-
+        return dict(zip(selected_fields.split(","), row))
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
 
-# тут поправить если мы храним координаты как [число, число], а не, как я, в виде словаря
 @router.get("/parkinggeojson/{parking_id}")
 def get_parking_geojson(parking_id: int):
     try:
@@ -159,38 +69,24 @@ def get_parking_geojson(parking_id: int):
         if row is None:
             return {"error": "Parking not found"}
 
-        (
-            id,
-            description,
-            coordinates,
-            name,
-            name_obj,
-            adm_area,
-            district,
-            occupancy
-        ) = row
+        pid, description, lon, lat, name, name_obj, adm_area, district, occupancy = row
 
-        lat = float(coordinates["lat"])
-        lon = float(coordinates["lon"])
-
-        feature = {
+        return {
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [lon, lat]
+                "coordinates": [lon, lat],
             },
             "properties": {
-                "id": id,
+                "id": pid,
                 "name": name,
                 "description": description,
                 "name_obj": name_obj,
                 "adm_area": adm_area,
                 "district": district,
-                "occupancy": occupancy
-            }
+                "occupancy": occupancy,
+            },
         }
-
-        return feature
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
@@ -198,17 +94,18 @@ def get_parking_geojson(parking_id: int):
 @router.post("/parkings", status_code=201)
 def create_parking(parking: ParkingCreate):
     try:
-        created_parking = ParkingsDAO.create(
-            parking.description,
-            parking.coordinates.model_dump_json(),  # Используем json-строку для jsonb поля
-            parking.name,
-            parking.name_obj,
-            parking.adm_area,
-            parking.district,
-            parking.occupancy
+        row = ParkingsDAO.create(
+            description=parking.description,
+            lat=parking.coordinates.lat,
+            lon=parking.coordinates.lon,
+            name=parking.name,
+            name_obj=parking.name_obj,
+            adm_area=parking.adm_area,
+            district=parking.district,
+            occupancy=parking.occupancy,
         )
-        fields = ["id", "name", "coordinates"]
-        return dict(zip(fields, created_parking))
+        pid, name, lon, lat = row
+        return {"id": pid, "name": name, "coordinates": {"lon": lon, "lat": lat}}
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
@@ -218,13 +115,14 @@ def update_parking(parking_id: int, parking: ParkingUpdate):
     updates = []
     params = []
 
-    # Динамически строим запрос UPDATE
     if parking.description is not None:
         updates.append("description = %s")
         params.append(parking.description)
     if parking.coordinates is not None:
-        updates.append("coordinates = %s")
-        params.append(parking.coordinates.model_dump_json())
+        # Для geometry используем ST_SetSRID(ST_MakePoint(lon, lat), 4326)
+        updates.append("coordinates = ST_SetSRID(ST_MakePoint(%s, %s), 4326)")
+        params.append(parking.coordinates.lon)
+        params.append(parking.coordinates.lat)
     if parking.name is not None:
         updates.append("name = %s")
         params.append(parking.name)
@@ -244,7 +142,7 @@ def update_parking(parking_id: int, parking: ParkingUpdate):
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    params.append(parking_id)  # ID в конец параметров для WHERE условия
+    params.append(parking_id)
 
     try:
         updated = ParkingsDAO.update(updates, params)
