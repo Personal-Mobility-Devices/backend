@@ -8,14 +8,14 @@ router = APIRouter()
 
 
 def _row_to_dict(row) -> dict:
-    id, description, lon, lat, adm_area, district, free_sim_count = row
+    id, description, lon, lat, adm_area, district, free_sims = row
     return {
         "id": id,
         "description": description,
         "coordinates": {"lon": lon, "lat": lat},
         "adm_area": adm_area,
         "district": district,
-        "free_sim_count": free_sim_count,
+        "free_sims": free_sims,
     }
 
 
@@ -66,7 +66,7 @@ def create_sim_stop(sim_stop: SIMStopCreate):
             lon=sim_stop.coordinates.lon,
             adm_area=sim_stop.adm_area,
             district=sim_stop.district,
-            free_sim_count=sim_stop.free_sim_count,
+            free_sims=sim_stop.free_sims,
         )
         return _row_to_dict(row)
     except psycopg2.Error:
