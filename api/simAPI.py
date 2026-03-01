@@ -69,8 +69,8 @@ def create_sim_stop(sim_stop: SIMStopCreate):
             free_sims=sim_stop.free_sims,
         )
         return _row_to_dict(row)
-    except psycopg2.Error:
-        raise HTTPException(status_code=500, detail="Database error")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/sim_stops/{stop_id}")
