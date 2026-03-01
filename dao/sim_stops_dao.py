@@ -15,7 +15,7 @@ class SimStopsDAO:
                         ST_Y(coordinates) AS lat,
                         adm_area,
                         district,
-                        free_sim_count
+                        free_sims
                     FROM sim_stops
                     ORDER BY id
                 """)
@@ -33,7 +33,7 @@ class SimStopsDAO:
                         ST_Y(coordinates) AS lat,
                         adm_area,
                         district,
-                        free_sim_count
+                        free_sims
                     FROM sim_stops
                     WHERE id = %s
                 """, (stop_id,))
@@ -57,7 +57,7 @@ class SimStopsDAO:
                         ST_Y(coordinates) AS lat,
                         adm_area,
                         district,
-                        free_sim_count
+                        free_sims
                     FROM sim_stops
                     WHERE coordinates && ST_MakeEnvelope(%s, %s, %s, %s, 4326)
                       AND ST_Within(coordinates, ST_MakeEnvelope(%s, %s, %s, %s, 4326))
@@ -72,12 +72,12 @@ class SimStopsDAO:
         lon: float,
         adm_area: Optional[str],
         district: Optional[str],
-        free_sim_count: int = 0
+        free_sims: int = 0
     ) -> Tuple:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO sim_stops (description, coordinates, adm_area, district, free_sim_count)
+                    INSERT INTO sim_stops (description, coordinates, adm_area, district, free_sims)
                     VALUES (%s, ST_SetSRID(ST_MakePoint(%s, %s), 4326), %s, %s, %s)
                     RETURNING
                         id,
@@ -86,8 +86,8 @@ class SimStopsDAO:
                         ST_Y(coordinates) AS lat,
                         adm_area,
                         district,
-                        free_sim_count
-                """, (description, lon, lat, adm_area, district, free_sim_count))
+                        free_sims
+                """, (description, lon, lat, adm_area, district, free_sims))
                 conn.commit()
                 return cur.fetchone()
 
@@ -113,9 +113,9 @@ class SimStopsDAO:
             updates.append("district = %s")
             params.append(stop_update.district)
 
-        if stop_update.free_sim_count is not None:
-            updates.append("free_sim_count = %s")
-            params.append(stop_update.free_sim_count)
+        if stop_update.free_sims is not None:
+            updates.append("free_sims = %s")
+            params.append(stop_update.free_sims)
 
         if not updates:
             return SimStopsDAO.get_by_id(stop_id)
@@ -133,7 +133,7 @@ class SimStopsDAO:
                 ST_Y(coordinates) AS lat,
                 adm_area,
                 district,
-                free_sim_count
+                free_sims
         """
 
         with get_db_connection() as conn:
