@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from api.parkingsAPI import router as parking_router
 from api.usersAPI import router as user_router
 from api.cvAPI import router as cv_router
@@ -9,6 +10,13 @@ from api.authAPI import router as auth_router
 from api.simAPI import router as sim_router
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def home():
