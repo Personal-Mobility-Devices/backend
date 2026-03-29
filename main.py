@@ -8,6 +8,7 @@ from api.favoriteParkingsAPI import router as favorite_parkings_router
 from api.camerasAPI import router as cameras_router
 from api.authAPI import router as auth_router
 from api.simAPI import router as sim_router
+from api.busAPI import router as bus_router
 
 app = FastAPI()
 
@@ -24,6 +25,7 @@ def home():
 
 
 app.include_router(sim_router, prefix="/api", tags=["SIM stops"])
+app.include_router(bus_router, prefix="/api", tags=["Bus"])
 app.include_router(parking_router, prefix="/api", tags=["Parkings"])
 app.include_router(parking_space_router, prefix="/parking_spaces", tags=["Parking spaces"])
 app.include_router(favorite_parkings_router, prefix="/favorite_parkings", tags=["Favorite parkings"])
