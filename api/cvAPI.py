@@ -10,13 +10,13 @@ router = APIRouter()
 
 OCCUPANCY_CACHE_TTL = 60
 
-@router.get("/data/{id_cam}")
-def get_cvdata(id_cam: int):
+@router.get("/data/")
+def get_cvdata():
     try:
-        row = CvDAO.get_data(id_cam)
+        row = CvDAO.get_data()
         if row is None:
             raise HTTPException(status_code=404, detail="Camera not found")
-        return row[0]
+        return row
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 

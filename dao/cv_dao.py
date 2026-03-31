@@ -4,11 +4,11 @@ from database import get_db_connection
 class CvDAO:
 
     @staticmethod
-    def get_data(id_cam: int):
+    def get_data():
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT cv_data FROM cameras WHERE id = %s", (id_cam,))
-                return cur.fetchone()
+                cur.execute("SELECT cv_data FROM cameras")
+                return cur.fetchall()
 
     @staticmethod
     def update_occupancy(id_parking: int, occupancy: int):
