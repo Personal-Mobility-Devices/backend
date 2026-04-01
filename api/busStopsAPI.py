@@ -6,6 +6,18 @@ from schemas.busStopsModels import BusStopCreate, BusStopUpdate
 
 router = APIRouter()
 
+def _row_to_dict(row) -> dict:
+    pid, description, lon, lat, name, name_obj, adm_area, district, occupancy = row
+    return {
+        "id": pid,
+        "description": description,
+        "coordinates": {"lon": lon, "lat": lat},
+        "name": name,
+        "name_obj": name_obj,
+        "adm_area": adm_area,
+        "district": district,
+        "occupancy": occupancy,
+    }
 
 @router.get("/bus_stops/all")
 def get_all_bus_stops():
@@ -36,7 +48,12 @@ def get_in_area(
     min_lat: float,
     max_lat: float
 ):
-    pass
+    try:
+        rows = BusStopsDAO.get_in_area(min_lat, max_lat, min_lon, max_lon)
+        return [_row_to_dict(row) for row in rows]
+    except psycopg2.Error:
+        raise HTTPException(status_code=500, detail="Database error")
+
 @router.get("/bus_stop/{stop_id}")
 def get_bus_stop(stop_id: int):
     try:
