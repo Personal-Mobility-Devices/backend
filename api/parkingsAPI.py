@@ -8,7 +8,7 @@ router = APIRouter()
 
 
 def _row_to_dict(row) -> dict:
-    pid, description, lon, lat, name, name_obj, adm_area, district, occupancy = row
+    pid, description, lon, lat, name, name_obj, adm_area, district, occupancy, all_spaces= row
     return {
         "id": pid,
         "description": description,
@@ -18,6 +18,7 @@ def _row_to_dict(row) -> dict:
         "adm_area": adm_area,
         "district": district,
         "occupancy": occupancy,
+        "all_spaces": all_spaces,
     }
 
 
@@ -69,7 +70,7 @@ def get_parking_geojson(parking_id: int):
         if row is None:
             return {"error": "Parking not found"}
 
-        pid, description, lon, lat, name, name_obj, adm_area, district, occupancy = row
+        pid, description, lon, lat, name, name_obj, adm_area, district, occupancy, all_spaces = row
 
         return {
             "type": "Feature",
@@ -85,6 +86,7 @@ def get_parking_geojson(parking_id: int):
                 "adm_area": adm_area,
                 "district": district,
                 "occupancy": occupancy,
+                "all_spaces": all_spaces
             },
         }
     except psycopg2.Error:
@@ -103,6 +105,7 @@ def create_parking(parking: ParkingCreate):
             adm_area=parking.adm_area,
             district=parking.district,
             occupancy=parking.occupancy,
+            all_spaces=parking.all_spaces,
         )
         pid, name, lon, lat = row
         return {"id": pid, "name": name, "coordinates": {"lon": lon, "lat": lat}}
@@ -138,6 +141,9 @@ def update_parking(parking_id: int, parking: ParkingUpdate):
     if parking.occupancy is not None:
         updates.append("occupancy = %s")
         params.append(parking.occupancy)
+    if parking.all_spaces is not None:
+        updates.append("all_spaces = %s")
+        params.append(parking.all_spaces)
 
     if not updates:
         raise HTTPException(status_code=400, detail="No fields to update")

@@ -21,7 +21,8 @@ class ParkingsDAO:
                         name_obj,
                         adm_area,
                         district,
-                        occupancy
+                        occupancy,
+                        all_spaces
                     FROM parkings
                 """)
                 return cur.fetchall()
@@ -41,7 +42,8 @@ class ParkingsDAO:
                         name_obj,
                         adm_area,
                         district,
-                        occupancy
+                        occupancy,
+                        all_spaces
                     FROM parkings
                     WHERE coordinates && ST_MakeEnvelope(%s, %s, %s, %s, 4326)
                       AND ST_Within(coordinates, ST_MakeEnvelope(%s, %s, %s, %s, 4326))
@@ -63,7 +65,8 @@ class ParkingsDAO:
                         name_obj,
                         adm_area,
                         district,
-                        occupancy
+                        occupancy,
+                        all_spaces
                     FROM parkings
                     WHERE id = %s
                 """, (parking_id,))
@@ -90,7 +93,8 @@ class ParkingsDAO:
                         name_obj,
                         adm_area,
                         district,
-                        occupancy
+                        occupancy,
+                        all_spaces
                     FROM parkings
                     WHERE id = %s
                 """, (parking_id,))
@@ -106,11 +110,12 @@ class ParkingsDAO:
             adm_area: Optional[str] = None,
             district: Optional[str] = None,
             occupancy: Optional[int] = None,
+            all_spaces: Optional[int] = None
     ):
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 query = """
-                    INSERT INTO parkings (description, coordinates, name, name_obj, adm_area, district, occupancy)
+                    INSERT INTO parkings (description, coordinates, name, name_obj, adm_area, district, occupancy,all_spaces)
                     VALUES (%s, ST_SetSRID(ST_MakePoint(%s, %s), 4326), %s, %s, %s, %s, %s)
                     RETURNING
                         id,
@@ -119,7 +124,7 @@ class ParkingsDAO:
                         ST_Y(coordinates) AS lat
                 """
                 try:
-                    cur.execute(query, (description, lon, lat, name, name_obj, adm_area, district, occupancy))
+                    cur.execute(query, (description, lon, lat, name, name_obj, adm_area, district, occupancy, all_spaces))
                     created = cur.fetchone()
                     conn.commit()
                     return created
