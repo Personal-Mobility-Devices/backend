@@ -2,12 +2,12 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from schemas.utilModels import Coordinates
+from schemas.utilModels import Coordinates, PolygonCooridinates
 
 
 class ParkingCreate(BaseModel):
     description: str
-    coordinates: Coordinates
+    coordinates: PolygonCooridinates
     name: Optional[str] = None
     name_obj: Optional[str] = None
     adm_area: Optional[str] = None
@@ -18,7 +18,7 @@ class ParkingCreate(BaseModel):
 
 class ParkingUpdate(BaseModel):
     description: Optional[str] = None
-    coordinates: Optional[Coordinates] = None
+    coordinates: Optional[PolygonCooridinates] = None
     name: Optional[str] = None
     name_obj: Optional[str] = None
     adm_area: Optional[str] = None

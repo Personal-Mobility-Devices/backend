@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 
 from fastapi import HTTPException
@@ -15,8 +16,7 @@ class ParkingsDAO:
                     SELECT
                         id,
                         description,
-                        ST_X(coordinates) AS lon,
-                        ST_Y(coordinates) AS lat,
+                        ST_AsGeoJSON(coordinates) AS coordinates,
                         name,
                         name_obj,
                         adm_area,
@@ -36,8 +36,7 @@ class ParkingsDAO:
                     SELECT
                         id,
                         description,
-                        ST_X(coordinates) AS lon,
-                        ST_Y(coordinates) AS lat,
+                        ST_AsGeoJSON(coordinates) AS coordinates,
                         name,
                         name_obj,
                         adm_area,
@@ -45,10 +44,8 @@ class ParkingsDAO:
                         occupancy,
                         all_spaces
                     FROM parkings
-                    WHERE coordinates && ST_MakeEnvelope(%s, %s, %s, %s, 4326)
-                      AND ST_Within(coordinates, ST_MakeEnvelope(%s, %s, %s, %s, 4326))
-                """, (lon_min, lat_min, lon_max, lat_max,
-                      lon_min, lat_min, lon_max, lat_max))
+                    WHERE ST_Intersects(coordinates, ST_MakeEnvelope(%s, %s, %s, %s, 4326))
+                """, (lon_min, lat_min, lon_max, lat_max))
                 return cur.fetchall()
 
     @staticmethod
@@ -59,8 +56,7 @@ class ParkingsDAO:
                     SELECT
                         id,
                         description,
-                        ST_X(coordinates) AS lon,
-                        ST_Y(coordinates) AS lat,
+                        ST_AsGeoJSON(coordinates) AS coordinates,
                         name,
                         name_obj,
                         adm_area,
@@ -87,8 +83,7 @@ class ParkingsDAO:
                     SELECT
                         id,
                         description,
-                        ST_X(coordinates) AS lon,
-                        ST_Y(coordinates) AS lat,
+                        ST_AsGeoJSON(coordinates) AS coordinates,
                         name,
                         name_obj,
                         adm_area,
@@ -103,8 +98,7 @@ class ParkingsDAO:
     @staticmethod
     def create(
             description: str,
-            lat: float,
-            lon: float,
+            coords: list,
             name: Optional[str] = None,
             name_obj: Optional[str] = None,
             adm_area: Optional[str] = None,
@@ -112,19 +106,21 @@ class ParkingsDAO:
             occupancy: Optional[int] = None,
             all_spaces: Optional[int] = None
     ):
+        if coords[0] != coords[-1]:
+            coords = coords + [coords[0]]
+        geojson_str = json.dumps({"type": "Polygon", "coordinates": [coords]})
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 query = """
-                    INSERT INTO parkings (description, coordinates, name, name_obj, adm_area, district, occupancy,all_spaces)
-                    VALUES (%s, ST_SetSRID(ST_MakePoint(%s, %s), 4326), %s, %s, %s, %s, %s)
+                    INSERT INTO parkings (description, coordinates, name, name_obj, adm_area, district, occupancy, all_spaces)
+                    VALUES (%s, ST_GeomFromGeoJSON(%s), %s, %s, %s, %s, %s, %s)
                     RETURNING
                         id,
                         name,
-                        ST_X(coordinates) AS lon,
-                        ST_Y(coordinates) AS lat
+                        ST_AsGeoJSON(coordinates) AS coordinates
                 """
                 try:
-                    cur.execute(query, (description, lon, lat, name, name_obj, adm_area, district, occupancy, all_spaces))
+                    cur.execute(query, (description, geojson_str, name, name_obj, adm_area, district, occupancy, all_spaces))
                     created = cur.fetchone()
                     conn.commit()
                     return created

@@ -1,3 +1,5 @@
+import json
+
 import psycopg2
 from fastapi import APIRouter, HTTPException
 
@@ -8,11 +10,11 @@ router = APIRouter()
 
 
 def _row_to_dict(row) -> dict:
-    pid, description, lon, lat, name, name_obj, adm_area, district, occupancy, all_spaces= row
+    pid, description, coordinates_json, name, name_obj, adm_area, district, occupancy, all_spaces = row
     return {
         "id": pid,
         "description": description,
-        "coordinates": {"lon": lon, "lat": lat},
+        "coordinates": json.loads(coordinates_json),
         "name": name,
         "name_obj": name_obj,
         "adm_area": adm_area,
@@ -70,14 +72,11 @@ def get_parking_geojson(parking_id: int):
         if row is None:
             return {"error": "Parking not found"}
 
-        pid, description, lon, lat, name, name_obj, adm_area, district, occupancy, all_spaces = row
+        pid, description, coordinates_json, name, name_obj, adm_area, district, occupancy, all_spaces = row
 
         return {
             "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [lon, lat],
-            },
+            "geometry": json.loads(coordinates_json),
             "properties": {
                 "id": pid,
                 "name": name,
@@ -96,10 +95,10 @@ def get_parking_geojson(parking_id: int):
 @router.post("/parkings", status_code=201)
 def create_parking(parking: ParkingCreate):
     try:
+        coords = [[c.lon, c.lat] for c in parking.coordinates.coords]
         row = ParkingsDAO.create(
             description=parking.description,
-            lat=parking.coordinates.lat,
-            lon=parking.coordinates.lon,
+            coords=coords,
             name=parking.name,
             name_obj=parking.name_obj,
             adm_area=parking.adm_area,
@@ -107,8 +106,8 @@ def create_parking(parking: ParkingCreate):
             occupancy=parking.occupancy,
             all_spaces=parking.all_spaces,
         )
-        pid, name, lon, lat = row
-        return {"id": pid, "name": name, "coordinates": {"lon": lon, "lat": lat}}
+        pid, name, coordinates_json = row
+        return {"id": pid, "name": name, "coordinates": json.loads(coordinates_json)}
     except psycopg2.Error:
         raise HTTPException(status_code=500, detail="Database error")
 
@@ -122,10 +121,12 @@ def update_parking(parking_id: int, parking: ParkingUpdate):
         updates.append("description = %s")
         params.append(parking.description)
     if parking.coordinates is not None:
-        # Для geometry используем ST_SetSRID(ST_MakePoint(lon, lat), 4326)
-        updates.append("coordinates = ST_SetSRID(ST_MakePoint(%s, %s), 4326)")
-        params.append(parking.coordinates.lon)
-        params.append(parking.coordinates.lat)
+        coords = [[c.lon, c.lat] for c in parking.coordinates.coords]
+        if coords[0] != coords[-1]:
+            coords.append(coords[0])
+        geojson_str = json.dumps({"type": "Polygon", "coordinates": [coords]})
+        updates.append("coordinates = ST_GeomFromGeoJSON(%s)")
+        params.append(geojson_str)
     if parking.name is not None:
         updates.append("name = %s")
         params.append(parking.name)
